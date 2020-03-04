@@ -8,6 +8,7 @@ function love.load()
 	cellsize=25
 	cellnum = 0
 	draggingEnabled = false
+	livingcells=0
 	LEFT=0
 	RIGHT=1
 	ABOVE=2
@@ -77,8 +78,10 @@ function setCell(x,y)
 	h,w=getCell(x,y)
 	if cells[h][w]==0 then
 		cells[h][w]=1
+		livingcells=livingcells+1
 	else
 		cells[h][w]=0
+		livingcells=livingcells-1
 	end
 	return h,w
 end
@@ -90,36 +93,78 @@ function alive(h,w)
 		return true
 	end
 end
-function getNeighbor(direction,h,w)
+function getNeighborStatus(direction,h,w)
 	totalcellsize=cellsize+1
 	if direction==LEFT then
 		if w-totalcellsize>0 then
 			leftcell_w=w-totalcellsize
 			leftalive=alive(h,leftcell_w)
-			if leftalive then
-				print("left")
-				print(h,leftcell_w)
-			end
 			return leftalive
 		end
 	elseif direction==RIGHT then
-		print("right")
+		if w+totalcellsize<width then
+			rightcell_w=w+totalcellsize
+			rightalive=alive(h,rightcell_w)
+			return rightalive
+		end
 	elseif direction==ABOVE then
-		print("above")
+		-- This is how our grid is setup, so we can do the math to look around a cell
+		--    wwwwwwww
+		-- 00:01234567
+		-- 26:01234567
+		-- 52:01234567
+		-- cell=26,3
+		-- abovcell=0,3
+		
+		abovecell=h-totalcellsize
+		print(abovecell)
+		if abovecell>=0 then
+			abovealive=alive(abovecell,w)
+			return abovealive
+		end
 	elseif direction==BELOW then
-		print("below")
+		belowcell=h+totalcellsize
+		if belowcell<height+cellsize then
+			belowalive=alive(belowcell,w)
+			return belowalive
+		end
 	end
 end
+function killCell(h,w)
+	cells[h][w]=0
+end
+function birthCell(h,w)
+	cells[h][w]=1
+end
 function tick()
-	for h=0,height,cellsize+1 do
-		for w=0,width,cellsize+1 do
-			if alive(h,w) then
-				leftAlive=getNeighbor(LEFT,h,w)
+	if livingcells>10 then
+		for h=0,height,cellsize+1 do
+			for w=0,width,cellsize+1 do
+				if alive(h,w) then
+					leftAlive=getNeighborStatus(LEFT,h,w)
+					rightAlive=getNeighborStatus(RIGHT,h,w)
+					aboveAlive=getNeighborStatus(ABOVE,h,w)
+					belowAlive=getNeighborStatus(BELOW,h,w)
+					neighborsAlive=0
+					if leftAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if rightAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if aboveAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if belowAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if neighborsAlive<=2 then
+						killCell(h,w)
+					elseif neighborsAlive>=3 then
+						birthCell(h,w)
+					end
+				end
 			end
-			--rightAlive=getNeighbor(RIGHT,h,w)
-			--aboveAlive=getNeighbor(ABOVE,h,w)
-			--belowAlive=getNeighbor(BELOW,h,w)
-
 		end
 	end
 end
