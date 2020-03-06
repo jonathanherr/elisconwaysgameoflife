@@ -5,21 +5,27 @@ function love.load()
 	pixels={}
 	width=1024
 	height=768
-	cellsize=25
+	cellsize=5
+	gutterSize=0
 	cellnum = 0
 	draggingEnabled = false
 	livingcells=0
-	LEFT=0
-	RIGHT=1
-	ABOVE=2
-	BELOW=3
+	go = false
+	W=0
+	E=1
+	N=2
+	S=3
+	NW=4
+	NE=5
+	SW=6
+	SE=7
 	lastCell = {["h"]=-1,["w"]=-1}
 	love.window.setTitle("Eli's Conway's Game Of Life")
 	love.window.setMode(width+(width/cellsize), height+(height/cellsize), {resizable=true, vsync=true, minwidth=800, minheight=600})
 
-	for h=0,height,cellsize+1 do
+	for h=0,height,cellsize+gutterSize do
 		cells[h]={}
-		for w=0,width,cellsize+1 do
+		for w=0,width,cellsize+gutterSize do
 			cells[h][w]=0
 			cellnum=cellnum+1
 		end
@@ -29,8 +35,8 @@ end
 function love.draw()
 	tick()
 	love.graphics.setBackgroundColor(0,0,0,0)
-	for h=0,height,cellsize+1 do
-		for w=0,width,cellsize+1 do
+	for h=0,height,cellsize+gutterSize do
+		for w=0,width,cellsize+gutterSize do
 			if cells[h][w]==0 then
 				love.graphics.setColor(1,0,0)
 			else
@@ -63,8 +69,8 @@ function love.mousereleased( x, y, button, istouch, presses)
 end
 
 function getCell(x,y)
-	for h=0,height,cellsize+1 do
-		for w=0,width,cellsize+1 do
+	for h=0,height,cellsize+gutterSize do
+		for w=0,width,cellsize+gutterSize do
 			if y>=h and y<=h+cellsize then
 				if x>=w and x<=w+cellsize then
 					return h,w
@@ -94,39 +100,66 @@ function alive(h,w)
 	end
 end
 function getNeighborStatus(direction,h,w)
-	totalcellsize=cellsize+1
-	if direction==LEFT then
+	totalcellsize=cellsize+gutterSize
+	if direction==E then
 		if w-totalcellsize>0 then
 			leftcell_w=w-totalcellsize
 			leftalive=alive(h,leftcell_w)
 			return leftalive
 		end
-	elseif direction==RIGHT then
+	elseif direction==W then
 		if w+totalcellsize<width then
 			rightcell_w=w+totalcellsize
 			rightalive=alive(h,rightcell_w)
 			return rightalive
 		end
-	elseif direction==ABOVE then
+	elseif direction==N then
 		-- This is how our grid is setup, so we can do the math to look around a cell
-		--    wwwwwwww
-		-- 00:01234567
-		-- 26:01234567
-		-- 52:01234567
+		--      wwwwwwww
+		-- h 00:01234567
+		-- h 26:01234567
+		-- h 52:01234567
 		-- cell=26,3
-		-- abovcell=0,3
+		-- abovecell=0,3
 		
 		abovecell=h-totalcellsize
-		print(abovecell)
 		if abovecell>=0 then
 			abovealive=alive(abovecell,w)
 			return abovealive
 		end
-	elseif direction==BELOW then
+	elseif direction==S then
 		belowcell=h+totalcellsize
-		if belowcell<height+cellsize then
+		if belowcell<height then
 			belowalive=alive(belowcell,w)
 			return belowalive
+		end
+	elseif direction==NW then
+		-- subtract one row and one column to get NE cell
+		nwcell_h=h-totalcellsize
+		nwcell_w=w-totalcellsize
+		if nwcell_h>=0 and nwcell_w>=0 then
+			return alive(nwcell_h,nwcell_w)
+		end
+	elseif direction==NE then
+		-- subtract one row and add one column to get NW cell
+		necell_h=h-totalcellsize
+		necell_w=w+totalcellsize
+		if necell_h>=0 and necell_w<width then
+			return alive(necell_h,necell_w)
+		end
+	elseif direction==SW then
+		-- add one row and subract one column to get SW cell
+		swcell_h=h+totalcellsize
+		swcell_w=w-totalcellsize
+		if swcell_h<height and swcell_w>=0 then
+			return alive(swcell_h,swcell_w)
+		end
+	elseif direction==SE then
+		-- add one row and add one column to get SE cell
+		secell_h=h+totalcellsize
+		secell_w=w+totalcellsize
+		if secell_h<height and secell_w<width then
+			return alive(secell_h,secell_w)
 		end
 	end
 end
@@ -138,31 +171,58 @@ function birthCell(h,w)
 end
 function tick()
 	if livingcells>10 then
-		for h=0,height,cellsize+1 do
-			for w=0,width,cellsize+1 do
-				if alive(h,w) then
-					leftAlive=getNeighborStatus(LEFT,h,w)
-					rightAlive=getNeighborStatus(RIGHT,h,w)
-					aboveAlive=getNeighborStatus(ABOVE,h,w)
-					belowAlive=getNeighborStatus(BELOW,h,w)
-					neighborsAlive=0
-					if leftAlive then
-						neighborsAlive=neighborsAlive+1
-					end
-					if rightAlive then
-						neighborsAlive=neighborsAlive+1
-					end
-					if aboveAlive then
-						neighborsAlive=neighborsAlive+1
-					end
-					if belowAlive then
-						neighborsAlive=neighborsAlive+1
-					end
-					if neighborsAlive<=2 then
-						killCell(h,w)
-					elseif neighborsAlive>=3 then
-						birthCell(h,w)
-					end
+		go=true
+	end
+	if go then
+		for h=0,height,cellsize+gutterSize do
+			for w=0,width,cellsize+gutterSize do
+				--w=west
+				--e=east
+				--n=north
+				--s=south
+				--nw=northwest
+				--ne=northeast
+				--se=southeast
+				--sw=southwest
+				WAlive=getNeighborStatus(W,h,w)
+				EAlive=getNeighborStatus(E,h,w)
+				NAlive=getNeighborStatus(N,h,w)
+				SAlive=getNeighborStatus(S,h,w)
+				NWAlive=getNeighborStatus(NW,h,w)
+				NEAlive=getNeighborStatus(NE,h,w)
+				SEAlive=getNeighborStatus(SE,h,w)
+				SWAlive=getNeighborStatus(SW,h,w)
+
+				neighborsAlive=0
+				if WAlive then
+					neighborsAlive=neighborsAlive+1
+				end
+				if EAlive then
+					neighborsAlive=neighborsAlive+1
+				end
+				if NAlive then
+					neighborsAlive=neighborsAlive+1
+				end
+				if SAlive then
+					neighborsAlive=neighborsAlive+1
+				end
+				if NEAlive then
+					neighborsAlive=neighborsAlive+1
+				end
+				if NWAlive then
+					neighborsAlive=neighborsAlive+1
+				end
+				if SEAlive then
+					neighborsAlive=neighborsAlive+1
+				end
+				if SWAlive then
+					neighborsAlive=neighborsAlive+1
+				end
+				if (neighborsAlive<2 or neighborsAlive>3) and alive(h,w) then
+					killCell(h,w)
+				end
+				if neighborsAlive==3 and not alive(h,w) then
+					birthCell(h,w)
 				end
 			end
 		end
