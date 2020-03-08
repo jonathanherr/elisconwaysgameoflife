@@ -2,6 +2,8 @@ inspect = require("inspect")
 suit = require 'suit'
 -- storage for text input
 local input = {text = ""}
+local speedslider={value=1,min=100,max=1,step=-1}
+
 function love.load()
 	cells={}
 	bufferCells={}
@@ -26,6 +28,7 @@ function love.load()
 	NE=5
 	SW=6
 	SE=7
+	smallerFont = love.graphics.newFont(10)
 	lastCell = {["h"]=-1,["w"]=-1}
 	love.window.setTitle("Eli's Conway's Game Of Life")
 	print(width/cellsize)
@@ -47,26 +50,38 @@ function initcells()
 	end
 end
 function drawui()
-	-- put the layout origin at position (100,100)
 	-- the layout will grow down and to the right from this point
 	suit.layout:reset(0,height)
+	rows = suit.layout:rows{pos = {0,height}, min_height = 300,
+	{200, 30},    -- the first cell will measure 200 by 30 px
+	{200, 30}, 
+	{200, 30},    -- the third cell will be 200 by 30 px
+	{200, 30},
+	{200, 30},
+	{200, 30}
+}
+	suit.Label("Options", {align = "left"}, rows.cell(1))
 
-	-- put a label that displays the text below the first cell
-	-- the cell size is the same as the last one (200x30 px)
-	-- the label text will be aligned to the left
-	suit.Label("Options", {align = "left"}, suit.layout:row(200,30))
-
-	-- put an empty cell that has the same size as the last cell (200x30 px)
-	suit.layout:row()
-
-	-- put a button of size 200x30 px in the cell below
-	-- if the button is pressed, quit the game
-	if suit.Button("Close", suit.layout:row()).hit then
-		love.event.quit()
+	if not go then
+		if suit.Button("Start", rows.cell(2)).hit then
+			go=true	
+		end
+	elseif go then
+		if suit.Button("Stop", rows.cell(2)).hit then
+			go=false
+		end
 	end
-	if suit.Button("Reset", suit.layout:row()).hit then
+	suit.Label(speedslider.value, {align='left',font=smallerFont}, rows.cell(4))
+	if suit.Slider(speedslider,rows.cell(3)).changed then
+		speed=speedslider.value
+	end
+	if suit.Button("Reset", rows.cell(5)).hit then
 		initcells()
 	end
+	if suit.Button("Close", rows.cell(6)).hit then
+		love.event.quit()
+	end
+	
 end
 function love.update()
 	drawui()
@@ -227,9 +242,6 @@ end
 
 function tick()
 	if ticks>speed then
-		if livingcells>2 then
-			go=true
-		end
 		if go then
 			-- copy cells into buffercells so we can flip/flop buffer and cells before/after each tick
 			bufferCells=copy(cells)		
