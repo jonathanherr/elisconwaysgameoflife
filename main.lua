@@ -2,14 +2,17 @@ inspect = require("inspect")
 
 function love.load()
 	cells={}
+	bufferCells={}
 	pixels={}
-	width=1024
-	height=768
-	cellsize=5
-	gutterSize=0
+	width=2560
+	height=1080
+	cellsize=10
+	gutterSize=1
 	cellnum = 0
 	draggingEnabled = false
 	livingcells=0
+	speed=1
+	ticks=0
 	go = false
 	W=0
 	E=1
@@ -100,6 +103,14 @@ function alive(h,w)
 	end
 end
 function getNeighborStatus(direction,h,w)
+		-- This is how our grid is setup, so we can do the math to look around a cell
+		--      ww w w
+		-- h 00:02652104
+		-- h 26:02652104
+		-- h 52:02652104
+		-- cell=26,3
+		-- abovecell=0,3
+		-- where cellsize=25 in this example and guttersize=1
 	totalcellsize=cellsize+gutterSize
 	if direction==E then
 		if w-totalcellsize>0 then
@@ -114,14 +125,6 @@ function getNeighborStatus(direction,h,w)
 			return rightalive
 		end
 	elseif direction==N then
-		-- This is how our grid is setup, so we can do the math to look around a cell
-		--      wwwwwwww
-		-- h 00:01234567
-		-- h 26:01234567
-		-- h 52:01234567
-		-- cell=26,3
-		-- abovecell=0,3
-		
 		abovecell=h-totalcellsize
 		if abovecell>=0 then
 			abovealive=alive(abovecell,w)
@@ -164,67 +167,87 @@ function getNeighborStatus(direction,h,w)
 	end
 end
 function killCell(h,w)
-	cells[h][w]=0
+	bufferCells[h][w]=0
 end
 function birthCell(h,w)
-	cells[h][w]=1
+	bufferCells[h][w]=1
 end
-function tick()
-	if livingcells>10 then
-		go=true
-	end
-	if go then
-		for h=0,height,cellsize+gutterSize do
-			for w=0,width,cellsize+gutterSize do
-				--w=west
-				--e=east
-				--n=north
-				--s=south
-				--nw=northwest
-				--ne=northeast
-				--se=southeast
-				--sw=southwest
-				WAlive=getNeighborStatus(W,h,w)
-				EAlive=getNeighborStatus(E,h,w)
-				NAlive=getNeighborStatus(N,h,w)
-				SAlive=getNeighborStatus(S,h,w)
-				NWAlive=getNeighborStatus(NW,h,w)
-				NEAlive=getNeighborStatus(NE,h,w)
-				SEAlive=getNeighborStatus(SE,h,w)
-				SWAlive=getNeighborStatus(SW,h,w)
+function copy(obj, seen)
+	if type(obj) ~= 'table' then return obj end
+	if seen and seen[obj] then return seen[obj] end
+	local s = seen or {}
+	local res = setmetatable({}, getmetatable(obj))
+	s[obj] = res
+	for k, v in pairs(obj) do res[copy(k, s)] = copy(v, s) end
+	return res
+end
 
-				neighborsAlive=0
-				if WAlive then
-					neighborsAlive=neighborsAlive+1
-				end
-				if EAlive then
-					neighborsAlive=neighborsAlive+1
-				end
-				if NAlive then
-					neighborsAlive=neighborsAlive+1
-				end
-				if SAlive then
-					neighborsAlive=neighborsAlive+1
-				end
-				if NEAlive then
-					neighborsAlive=neighborsAlive+1
-				end
-				if NWAlive then
-					neighborsAlive=neighborsAlive+1
-				end
-				if SEAlive then
-					neighborsAlive=neighborsAlive+1
-				end
-				if SWAlive then
-					neighborsAlive=neighborsAlive+1
-				end
-				if (neighborsAlive<2 or neighborsAlive>3) and alive(h,w) then
-					killCell(h,w)
-				end
-				if neighborsAlive==3 and not alive(h,w) then
-					birthCell(h,w)
+function tick()
+	if ticks>speed then
+		if livingcells>2 then
+			go=true
+		end
+		if go then
+			-- copy cells into buffercells so we can flip/flop buffer and cells before/after each tick
+			bufferCells=copy(cells)		
+			
+			for h=0,height,cellsize+gutterSize do
+				for w=0,width,cellsize+gutterSize do
+					--w=west
+					--e=east
+					--n=north
+					--s=south
+					--nw=northwest
+					--ne=northeast
+					--se=southeast
+					--sw=southwest
+					WAlive=getNeighborStatus(W,h,w)
+					EAlive=getNeighborStatus(E,h,w)
+					NAlive=getNeighborStatus(N,h,w)
+					SAlive=getNeighborStatus(S,h,w)
+					NWAlive=getNeighborStatus(NW,h,w)
+					NEAlive=getNeighborStatus(NE,h,w)
+					SEAlive=getNeighborStatus(SE,h,w)
+					SWAlive=getNeighborStatus(SW,h,w)
+
+					neighborsAlive=0
+					if WAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if EAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if NAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if SAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if NEAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if NWAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if SEAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if SWAlive then
+						neighborsAlive=neighborsAlive+1
+					end
+					if (neighborsAlive<2 or neighborsAlive>3) and alive(h,w) then
+						killCell(h,w)
+					end
+					if neighborsAlive==3 and not alive(h,w) then
+						birthCell(h,w)
+					end
 				end
 			end
+			
+			cells = copy(bufferCells)
+			
 		end
+		ticks=0
 	end
+	ticks=ticks+1
 end
