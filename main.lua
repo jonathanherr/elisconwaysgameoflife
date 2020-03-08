@@ -1,19 +1,23 @@
 inspect = require("inspect")
-
+suit = require 'suit'
+-- storage for text input
+local input = {text = ""}
 function love.load()
 	cells={}
 	bufferCells={}
 	pixels={}
-	width=2560
-	height=1080
-	cellsize=10
+	width=1000
+	height=800
+	uiwidth=1000
+	uiheight=200
+	cellsize=5
 	gutterSize=1
 	cellnum = 0
 	draggingEnabled = false
 	livingcells=0
 	speed=1
 	ticks=0
-	go = false
+	go = false	
 	W=0
 	E=1
 	N=2
@@ -24,8 +28,16 @@ function love.load()
 	SE=7
 	lastCell = {["h"]=-1,["w"]=-1}
 	love.window.setTitle("Eli's Conway's Game Of Life")
-	love.window.setMode(width+(width/cellsize), height+(height/cellsize), {resizable=true, vsync=true, minwidth=800, minheight=600})
+	print(width/cellsize)
+	print(width+((width/cellsize)*gutterSize))
+	print(height+((height/cellsize)*gutterSize)+uiheight)
+	love.window.setMode(width, height+((height/cellsize)*gutterSize)+uiheight, {resizable=true, vsync=true, minwidth=800, minheight=600})
 
+	initcells()
+end
+function initcells()
+	ticks=0
+	cellnum=0
 	for h=0,height,cellsize+gutterSize do
 		cells[h]={}
 		for w=0,width,cellsize+gutterSize do
@@ -34,9 +46,34 @@ function love.load()
 		end
 	end
 end
+function drawui()
+	-- put the layout origin at position (100,100)
+	-- the layout will grow down and to the right from this point
+	suit.layout:reset(0,height)
 
+	-- put a label that displays the text below the first cell
+	-- the cell size is the same as the last one (200x30 px)
+	-- the label text will be aligned to the left
+	suit.Label("Options", {align = "left"}, suit.layout:row(200,30))
+
+	-- put an empty cell that has the same size as the last cell (200x30 px)
+	suit.layout:row()
+
+	-- put a button of size 200x30 px in the cell below
+	-- if the button is pressed, quit the game
+	if suit.Button("Close", suit.layout:row()).hit then
+		love.event.quit()
+	end
+	if suit.Button("Reset", suit.layout:row()).hit then
+		initcells()
+	end
+end
+function love.update()
+	drawui()
+end
 function love.draw()
 	tick()
+	suit.draw()
 	love.graphics.setBackgroundColor(0,0,0,0)
 	for h=0,height,cellsize+gutterSize do
 		for w=0,width,cellsize+gutterSize do
@@ -59,9 +96,12 @@ function love.mousemoved(x,y,dx,dy,istouch)
 	if draggingEnabled then
 		h,w=getCell(x,y)
 		if lastCell.h~=h or lastCell.w~=w then
-			h,w=setCell(x,y)
-			lastCell.h=h
-			lastCell.w=w
+			r=setCell(x,y)
+			if r ~= nil then
+				h,w=r
+				lastCell.h=h
+				lastCell.w=w
+			end
 		end
 	end
 end
@@ -85,14 +125,17 @@ end
 
 function setCell(x,y)
 	h,w=getCell(x,y)
-	if cells[h][w]==0 then
-		cells[h][w]=1
-		livingcells=livingcells+1
-	else
-		cells[h][w]=0
-		livingcells=livingcells-1
+	if h~=nil and h<height and w<width then
+		if cells[h][w]==0 then
+			cells[h][w]=1
+			livingcells=livingcells+1
+		else
+			cells[h][w]=0
+			livingcells=livingcells-1
+		end
+		return h,w
 	end
-	return h,w
+	return nil
 end
 
 function alive(h,w)
