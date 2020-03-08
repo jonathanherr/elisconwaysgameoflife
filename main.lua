@@ -1,9 +1,8 @@
-inspect = require("inspect")
 suit = require 'suit'
 -- storage for text input
-local input = {text = ""}
-local speedslider={value=1,min=100,max=1,step=-1}
 
+local speedslider={value=1,min=100,max=1,step=-1}
+local cellsizeslider = {value = 0,max=100,min=5,step=5}
 function love.load()
 	cells={}
 	bufferCells={}
@@ -13,6 +12,7 @@ function love.load()
 	uiwidth=1000
 	uiheight=200
 	cellsize=5
+	cellsizeslider.value=cellsize
 	gutterSize=1
 	cellnum = 0
 	draggingEnabled = false
@@ -53,26 +53,27 @@ function drawui()
 	-- the layout will grow down and to the right from this point
 	suit.layout:reset(0,height)
 	rows = suit.layout:rows{pos = {0,height}, min_height = 300,
-	{200, 30},    -- the first cell will measure 200 by 30 px
-	{200, 30}, 
-	{200, 30},    -- the third cell will be 200 by 30 px
-	{200, 30},
-	{200, 30},
-	{200, 30}
-}
-	suit.Label("Options", {align = "left"}, rows.cell(1))
-
+	{200, 25},
+	{200, 25},    -- the first cell will measure 200 by 30 px
+	{200, 25}, 
+	{200, 25},
+	{200, 25},
+	{200, 25}
+}	
+	if suit.Slider(cellsizeslider,rows.cell(2)).changed then
+		cellsize=cellsizeslider.value
+		initcells()
+	end
 	if not go then
-		if suit.Button("Start", rows.cell(2)).hit then
+		if suit.Button("Start", rows.cell(3)).hit then
 			go=true	
 		end
 	elseif go then
-		if suit.Button("Stop", rows.cell(2)).hit then
+		if suit.Button("Stop", rows.cell(3)).hit then
 			go=false
 		end
 	end
-	suit.Label(speedslider.value, {align='left',font=smallerFont}, rows.cell(4))
-	if suit.Slider(speedslider,rows.cell(3)).changed then
+	if suit.Slider(speedslider,rows.cell(4)).changed then
 		speed=speedslider.value
 	end
 	if suit.Button("Reset", rows.cell(5)).hit then
